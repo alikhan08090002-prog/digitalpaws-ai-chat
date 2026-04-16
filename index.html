@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Digital AI — ИИ на базе NVIDIA AI | Реальный API + База данных</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', system-ui, sans-serif; }
+        body { background: #ffffff; scroll-behavior: smooth; }
+        .accent-bg { background: #3b82f6; }
+        .accent-text { color: #3b82f6; }
+        .btn-accent { background-color: #3b82f6; transition: all 0.2s ease; }
+        .btn-accent:hover { background-color: #2563eb; transform: translateY(-1px); }
+        .form-card { border: 1px solid #eaeef5; background: #ffffff; border-radius: 24px; box-shadow: 0 8px 20px rgba(0,0,0,0.02); }
+        .chat-widget { position: fixed; bottom: 24px; right: 24px; z-index: 1000; }
+        .chat-toggle { width: 56px; height: 56px; border-radius: 28px; background: #3b82f6; box-shadow: 0 8px 20px rgba(59,130,246,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+        .chat-toggle:hover { transform: scale(1.05); background: #2563eb; }
+        .chat-window { position: absolute; bottom: 70px; right: 0; width: 400px; height: 550px; background: white; border-radius: 24px; box-shadow: 0 20px 35px -12px rgba(0,0,0,0.2); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #eef2f8; }
+        @media (max-width: 480px) { .chat-window { width: 340px; right: -10px; } }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 16px; background: #f9fafc; display: flex; flex-direction: column; gap: 12px; }
+        .message { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 0.9rem; line-height: 1.4; }
+        .user-message { align-self: flex-end; background: #3b82f6; color: white; border-bottom-right-radius: 4px; }
+        .bot-message { align-self: flex-start; background: #ffffff; border: 1px solid #e2e8f0; color: #1e293b; border-bottom-left-radius: 4px; }
+        .typing-indicator { display: flex; gap: 4px; padding: 8px 12px; background: #eef2ff; border-radius: 20px; width: fit-content; }
+        .typing-dot { width: 8px; height: 8px; background: #6b7280; border-radius: 50%; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100%{opacity:0.4;} 50%{opacity:1;} }
+        .chat-input-area { display: flex; border-top: 1px solid #eef2f8; padding: 12px; background: white; gap: 8px; }
+        .chat-input { flex: 1; border: 1px solid #e2e8f0; border-radius: 32px; padding: 8px 16px; outline: none; }
+        .chat-input:focus { border-color: #3b82f6; }
+        .send-btn { background: #3b82f6; border: none; border-radius: 32px; padding: 0 16px; color: white; font-weight: 500; cursor: pointer; }
+        .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .model-badge { font-size: 0.7rem; background: #1e3a8a; color: white; padding: 2px 8px; border-radius: 20px; display: inline-block; margin-left: 8px; vertical-align: middle; }
+        .stats-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 16px; }
+    </style>
+</head>
+<body>
+
+    <div class="max-w-7xl mx-auto px-5 md:px-8 py-8 md:py-12">
+        <!-- Hero секция -->
+        <div class="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+                <div class="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold mb-6">⚡ NVIDIA AI INFUSED + БАЗА ДАННЫХ</div>
+                <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900">DIGITAL<span class="accent-text"> AI</span></h1>
+                <p class="text-xl md:text-2xl text-gray-600 mt-5 font-medium">Разговорный ИИ нового поколения<br>на базе NVIDIA AI</p>
+                <p class="text-gray-500 mt-4 text-lg border-l-4 border-blue-400 pl-4">С сохранением истории в базе данных и реальным API</p>
+                <div class="mt-8 flex flex-wrap gap-4">
+                    <button id="openChatFromHeroBtn" class="btn-accent text-white px-8 py-3 rounded-full font-semibold">💬 Открыть чат</button>
+                </div>
+            </div>
+            
+            <!-- Форма регистрации -->
+            <div class="form-card p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-gray-800">📝 Регистрация</h2>
+                <p class="text-gray-500 mt-1 text-sm">Введите данные для сохранения истории чата</p>
+                <form id="registerForm" class="mt-6 space-y-5">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Имя</label><input type="text" id="userName" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-300" required></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" id="userEmail" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-300" required></div>
+                    <button type="submit" class="w-full btn-accent text-white font-semibold py-3 rounded-xl">🎯 Начать использование</button>
+                </form>
+                <div id="registerSuccessMsg" class="hidden mt-4 text-center text-green-600 text-sm"></div>
+                <div id="statsDisplay" class="hidden mt-4 stats-card text-sm"></div>
+            </div>
+        </div>
+
+        <!-- Информация о базе данных -->
+        <div class="mt-16 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+            <h3 class="font-bold text-lg mb-3">🗄️ Что сохраняется в базе данных?</h3>
+            <div class="grid md:grid-cols-3 gap-4 text-sm">
+                <div class="flex items-center gap-2">✅ <span>История всех сообщений</span></div>
+                <div class="flex items-center gap-2">✅ <span>Данные пользователей</span></div>
+                <div class="flex items-center gap-2">✅ <span>Логи API запросов</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Чат-виджет -->
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-toggle" id="chatToggleBtn">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+        </div>
+        <div id="chatWindow" class="chat-window hidden flex flex-col">
+            <div class="bg-blue-600 text-white px-4 py-3 font-semibold flex justify-between items-center">
+                <span>🤖 Digital AI <span class="model-badge">Gemma 3N E4B</span></span>
+                <button id="closeChatBtn" class="text-white text-xl">&times;</button>
+            </div>
+            <div id="chatMessagesContainer" class="chat-messages">
+                <div class="message bot-message">🚀 Привет! Я Digital AI на реальном NVIDIA API. Войдите через форму регистрации, чтобы сохранять историю чата в базе данных!</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Напишите сообщение...">
+                <button id="chatSendBtn" class="send-btn">Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentUser = null;
+        let chatHistory = [];
+        
+        const chatToggle = document.getElementById('chatToggleBtn');
+        const chatWindow = document.getElementById('chatWindow');
+        const closeChat = document.getElementById('closeChatBtn');
+        const chatMessagesDiv = document.getElementById('chatMessagesContainer');
+        const chatInput = document.getElementById('chatInput');
+        const chatSend = document.getElementById('chatSendBtn');
+        const openChatHero = document.getElementById('openChatFromHeroBtn');
+        const registerForm = document.getElementById('registerForm');
+        const registerSuccessMsg = document.getElementById('registerSuccessMsg');
+        const statsDisplay = document.getElementById('statsDisplay');
+        
+        function openChat() { 
+            chatWindow.classList.remove('hidden'); 
+            if(currentUser) loadChatHistory(); 
+        }
+        function closeChatFunc() { chatWindow.classList.add('hidden'); }
+        
+        chatToggle.addEventListener('click', openChat);
+        closeChat.addEventListener('click', closeChatFunc);
+        if(openChatHero) openChatHero.addEventListener('click', (e) => { e.preventDefault(); openChat(); });
+        
+        function addMessage(text, isUser) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            msgDiv.innerText = text;
+            chatMessagesDiv.appendChild(msgDiv);
+            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+            return msgDiv;
+        }
+        
+        function showTyping() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            for(let i=0;i<3;i++) { 
+                const dot = document.createElement('div'); 
+                dot.className = 'typing-dot'; 
+                typingDiv.appendChild(dot); 
+            }
+            chatMessagesDiv.appendChild(typingDiv);
+            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+        }
+        
+        function removeTyping() { 
+            const el = document.getElementById('typingIndicator'); 
+            if(el) el.remove(); 
+        }
+        
+        async function loadChatHistory() {
+            if (!currentUser) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/chat-history/${encodeURIComponent(currentUser.email)}`);
+                const data = await response.json();
+                
+                if (data.success && data.history && data.history.length > 0) {
+                    while (chatMessagesDiv.children.length > 1) {
+                        chatMessagesDiv.removeChild(chatMessagesDiv.lastChild);
+                    }
+                    
+                    for (const msg of data.history) {
+                        addMessage(msg.content, msg.role === 'user');
+                    }
+                    chatHistory = data.history;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки истории:', error);
+            }
+        }
+        
+        async function saveMessage(role, content) {
+            if (!currentUser) return;
+            
+            try {
+                await fetch(`${API_BASE}/save-message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_email: currentUser.email,
+                        role: role,
+                        content: content
+                    })
+                });
+            } catch (error) {
+                console.error('Ошибка сохранения сообщения:', error);
+            }
+        }
+        
+        async function sendMessageToNVIDIA(userMessage) {
+            addMessage(userMessage, true);
+            await saveMessage('user', userMessage);
+            
+            chatInput.value = '';
+            chatSend.disabled = true;
+            showTyping();
+            
+            try {
+                const response = await fetch(`${API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: userMessage,
+                        user_email: currentUser ? currentUser.email : null,
+                        history: chatHistory.slice(-10)
+                    })
+                });
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullResponse = '';
+                let botMessageDiv = null;
+                
+                removeTyping();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.substring(6);
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.content) {
+                                    fullResponse += parsed.content;
+                                    if (!botMessageDiv) {
+                                        botMessageDiv = addMessage('', false);
+                                    }
+                                    botMessageDiv.innerText = fullResponse;
+                                    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+                                }
+                                if (parsed.error) {
+                                    addMessage(`❌ ${parsed.error}`, false);
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+                
+                if (fullResponse) {
+                    await saveMessage('assistant', fullResponse);
+                    chatHistory.push({ role: 'assistant', content: fullResponse });
+                }
+                
+            } catch (error) {
+                removeTyping();
+                addMessage(`❌ Ошибка: ${error.message}`, false);
+                console.error('Error:', error);
+            } finally {
+                chatSend.disabled = false;
+                chatInput.focus();
+            }
+        }
+        
+        chatSend.addEventListener('click', () => {
+            const message = chatInput.value.trim();
+            if (message && currentUser) {
+                sendMessageToNVIDIA(message);
+            } else if (!currentUser) {
+                addMessage('⚠️ Пожалуйста, зарегистрируйтесь через форму справа, чтобы начать общение!', false);
+            }
+        });
+        
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const message = chatInput.value.trim();
+                if (message && currentUser) {
+                    sendMessageToNVIDIA(message);
+                } else if (!currentUser) {
+                    addMessage('⚠️ Пожалуйста, зарегистрируйтесь через форму справа, чтобы начать общение!', false);
+                }
+            }
+        });
+        
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('userName').value;
+            const email = document.getElementById('userEmail').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser = { name: data.name, email: email, api_key: data.api_key };
+                    registerSuccessMsg.classList.remove('hidden');
+                    registerSuccessMsg.innerHTML = `✅ ${data.message}! Добро пожаловать, ${data.name}! Теперь ваша история чата будет сохраняться.`;
+                    registerSuccessMsg.classList.remove('text-red-600');
+                    registerSuccessMsg.classList.add('text-green-600');
+                    
+                    const statsResponse = await fetch(`${API_BASE}/stats`);
+                    const statsData = await statsResponse.json();
+                    if (statsData.success) {
+                        statsDisplay.classList.remove('hidden');
+                        statsDisplay.innerHTML = `
+                            📊 Статистика платформы:<br>
+                            👥 Пользователей: ${statsData.stats.users}<br>
+                            💬 Сообщений: ${statsData.stats.messages}<br>
+                            🔄 API вызовов: ${statsData.stats.api_calls}
+                        `;
+                    }
+                    
+                    setTimeout(() => registerSuccessMsg.classList.add('hidden'), 5000);
+                    setTimeout(() => openChat(), 1000);
+                }
+            } catch (error) {
+                registerSuccessMsg.classList.remove('hidden');
+                registerSuccessMsg.innerHTML = `❌ Ошибка: ${error.message}`;
+                registerSuccessMsg.classList.add('text-red-600');
+                setTimeout(() => {
+                    registerSuccessMsg.classList.add('hidden');
+                    registerSuccessMsg.classList.remove('text-red-600');
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
